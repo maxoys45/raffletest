@@ -16,13 +16,11 @@ function App() {
     const socket = new WebSocket("ws://localhost:8080");
 
     socket.onopen = () => {
-      console.log("Connected to server");
+      // Create some kind of welcome to the site popup
     };
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-
-      console.log("data", data);
 
       // const { type } = data;
 
@@ -39,12 +37,24 @@ function App() {
       //   ]);
       // }
 
+      switch (data.type) {
+        case "RAFFLE_ENTRIES":
+          setEntries(data.entries);
+          break;
+
+        case "ENTRY_ACCEPTED":
+          console.log(`amount=${data.amount} address=${data.address}`);
+
+          setEntries((prev) => [
+            ...prev,
+            { amount: data.amount, address: data.address },
+          ]);
+          break;
+
+        default:
+          console.log("Unknown data.type");
+      }
       if (data.type === "ENTRY_ACCEPTED") {
-        console.log(`amount=${data.amount} address=${data.address}`);
-        setEntries((prev) => [
-          ...prev,
-          { amount: data.amount, address: data.address },
-        ]);
       }
     };
 
@@ -77,11 +87,12 @@ function App() {
     setAddress("");
   };
 
-  console.log(entries);
+  console.log("Current entries");
+  console.dir(entries);
 
   return (
     <div className="p-4">
-      <div className="flex gap-[1px] w-full h-[30px] bg-black max-w-[640px] rounded-full mb-4 overflow-hidden">
+      <div className="flex flex-row-reverse gap-[1px] w-full h-[30px] bg-black max-w-[640px] rounded-full mb-4 overflow-hidden">
         <AnimatePresence>
           {entries.map((entry, index) => (
             <EntryGroup key={index} entry={entry} index={index} />

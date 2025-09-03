@@ -5,11 +5,13 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "start": "nodemon server.js"
+    "start": "nodemon server.js",
+    "dev": "cd app && yarn dev"
   },
   "devDependencies": {
     "crypto": "^1.0.1",
     "nodemon": "^3.1.10",
+    "uuid": "^11.1.0",
     "ws": "^8.18.3"
   }
 }

@@ -1,4 +1,5 @@
 import { WebSocketServer } from "ws";
+import { v4 as uuidv4 } from "uuid";
 
 import { pickRandomWinner } from "./helpers/raffle.js";
 
@@ -11,6 +12,7 @@ const globals = {
   currentEntries: [],
   queuedEntries: [],
   pickingWinner: false,
+  numPlayersInPot: 5,
 };
 
 wss.on("connection", (ws) => {
@@ -19,9 +21,9 @@ wss.on("connection", (ws) => {
   // Send current raffle state to new client
   // ws.send(JSON.stringify({ type: "CURRENT_USERS", users: globals.currentUsers }));
 
-  // ws.send(
-  //   JSON.stringify({ type: "RAFFLE_ENTRIES", entries: globals.currentEntries })
-  // );
+  ws.send(
+    JSON.stringify({ type: "RAFFLE_ENTRIES", entries: globals.currentEntries })
+  );
 
   // Listen for messages from client
   ws.on("message", (msg) => {
@@ -39,7 +41,7 @@ wss.on("connection", (ws) => {
     if (data.type === "RAFFLE_ENTRY") {
       const { amount, address } = data;
 
-      handleNewEntry({ amount, address });
+      handleNewEntry({ amount, address, id: uuidv4() });
     }
   });
 
@@ -50,11 +52,8 @@ wss.on("connection", (ws) => {
 
 // Broadcast helper function
 const broadcast = (data) => {
-  console.log("broadcast", data);
-
   wss.clients.forEach((client) => {
     if (client.readyState === client.OPEN) {
-      console.log("client is OPEN");
       client.send(JSON.stringify(data));
     }
   });
@@ -62,16 +61,13 @@ const broadcast = (data) => {
 
 // Handle new raffle entry
 const handleNewEntry = (entry) => {
-  console.log(1);
   console.log(entry);
 
   if (globals.pickingWinner) {
-    console.log(2);
     globals.queuedEntries.push(entry);
 
     broadcast({ type: "QUEUED_ENTRY", entry });
   } else {
-    console.log(3);
     globals.currentEntries.push(entry);
 
     broadcast({
@@ -80,13 +76,10 @@ const handleNewEntry = (entry) => {
       address: entry.address,
     });
 
-    if (globals.currentEntries?.length >= 10) {
-      console.log(4);
+    if (globals.currentEntries?.length >= globals.numPlayersInPot) {
       startPickingWinner();
     }
   }
-
-  console.log(globals.currentEntries);
 };
 
 const startPickingWinner = () => {
@@ -99,12 +92,15 @@ const startPickingWinner = () => {
 
     broadcast({ TYPE: "WINNER_CHOSEN", winner });
 
-    globals.currentEntries = globals.queuedEntries.splice(0, 10);
+    globals.currentEntries = globals.queuedEntries.splice(
+      0,
+      globals.numPlayersInPot
+    );
 
     globals.pickingWinner = false;
 
     // If the pot is full again, pick another winner.
-    if (globals.currentEntries.length >= 10) {
+    if (globals.currentEntries.length >= globals.numPlayersInPot) {
       startPickingWinner();
     }
   }, 5000);
