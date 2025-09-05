@@ -1,6 +1,11 @@
-import { useState, useEffect } from "react";
+// @ts-nocheck
+
+import { useState, useEffect, useRef } from "react";
 import clsx from "clsx";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
+
+import EntryGroup from "./components/EntryGroup";
+
 import "./App.css";
 
 function App() {
@@ -10,6 +15,14 @@ function App() {
   const [entries, setEntries] = useState([]);
   const [amount, setAmount] = useState("");
   const [address, setAddress] = useState("");
+  const [spinning, setSpinning] = useState(false);
+
+  const containerRef = useRef(null);
+  const carouselRef = useRef(null);
+  const controls = useAnimation();
+
+  const maxEntries = 4;
+  const numOfloops = 20;
 
   useEffect(() => {
     // Connect to WebSocket server
@@ -51,6 +64,8 @@ function App() {
           ]);
           break;
 
+        case "PICKING_WINNER":
+
         default:
           console.log("Unknown data.type");
       }
@@ -68,14 +83,14 @@ function App() {
     return () => socket.close();
   }, []);
 
-  const checkingIn = (event: React.SyntheticEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  // const checkingIn = (event: React.SyntheticEvent<HTMLFormElement>) => {
+  //   event.preventDefault();
 
-    if (ws && username.trim()) {
-      ws.send(JSON.stringify({ type: "CHECKING_IN", user: username }));
-      setUsername("");
-    }
-  };
+  //   if (ws && username.trim()) {
+  //     ws.send(JSON.stringify({ type: "CHECKING_IN", user: username }));
+  //     setUsername("");
+  //   }
+  // };
 
   const enterRaffle = (event) => {
     event.preventDefault();
@@ -83,21 +98,82 @@ function App() {
     ws.send(
       JSON.stringify({ type: "RAFFLE_ENTRY", amount: Number(amount), address })
     );
+
     setAmount("");
     setAddress("");
   };
 
-  console.log("Current entries");
-  console.dir(entries);
+  // Spin when entries reaches 5
+  useEffect(() => {
+    if (entries.length === maxEntries && !spinning) {
+      setTimeout(() => {
+        setSpinning(true);
+      }, 1000);
+    }
+  }, [entries, spinning]);
+
+  // Spin animation
+  useEffect(() => {
+    if (carouselRef.current && spinning) {
+      const totalWidth = containerRef.current.offsetWidth;
+
+      console.log(totalWidth);
+
+      controls
+        .start({
+          x: [-0, -totalWidth * (numOfloops - 1)],
+          transition: {
+            x: {
+              duration: 3, // adjust speed here
+              ease: [0.5, 0, 0, 1],
+            },
+          },
+        })
+        .then(() => {
+          // controls.set({ x: 0 });
+          // setEntries([]);
+          // setSpinning(false);
+        });
+    }
+  }, [spinning, entries, controls]);
+
+  const renderEntries = spinning
+    ? Array(numOfloops + 1)
+        .fill(entries)
+        .flat()
+    : entries;
 
   return (
     <div className="p-4">
-      <div className="flex flex-row-reverse gap-[1px] w-full h-[30px] bg-black max-w-[640px] rounded-full mb-4 overflow-hidden">
-        <AnimatePresence>
-          {entries.map((entry, index) => (
-            <EntryGroup key={index} entry={entry} index={index} />
-          ))}
-        </AnimatePresence>
+      <div
+        ref={containerRef}
+        className=" overflow-hidden max-w-[640px] w-[640px] rounded-full mb-4 bg-black"
+      >
+        <motion.div
+          ref={carouselRef}
+          className={clsx(
+            "flex h-[30px]",
+            entries.length > 1 && "flex-row-reverse",
+            !spinning && "w-full"
+          )}
+          style={spinning ? { width: `${(numOfloops + 1) * 100}%` } : {}}
+          animate={controls}
+        >
+          <AnimatePresence>
+            {renderEntries.map((entry, index) => {
+              const originalIndex = index % entries.length;
+
+              return (
+                <EntryGroup
+                  key={index}
+                  entry={entry}
+                  index={originalIndex}
+                  spinning={spinning}
+                />
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
       </div>
 
       <h1 className="text-4xl font-bold">🎟️ Raffle Updates</h1>
@@ -114,7 +190,7 @@ function App() {
         </button>
       </form> */}
 
-      <form className="flex gap-2 mt-4" onSubmit={enterRaffle}>
+      <form className="flex gap-2 mt-4 justify-center" onSubmit={enterRaffle}>
         <input
           className="bg-white rounded-sm p-1 leading-1 text-black outline-0"
           type="number"
@@ -145,34 +221,5 @@ function App() {
     </div>
   );
 }
-
-const EntryGroup = ({ entry, index }) => {
-  const colors = [
-    "#FF0000",
-    "#00FFFF",
-    "#FF8000",
-    "#0080FF",
-    "#FFFF00",
-    "#8000FF",
-    "#80FF00",
-    "#FF00FF",
-    "#00FF80",
-    "#FF0080",
-  ];
-
-  return (
-    <motion.div
-      className="basis-0 shrink-0"
-      layout
-      initial={{ flexGrow: 0 }}
-      animate={{
-        flexGrow: entry.amount,
-        transition: { duration: 0.5, delay: 0.2, ease: "easeInOut" },
-      }}
-      exit={{ flexGrow: 0 }}
-      style={{ backgroundColor: colors[index] }}
-    ></motion.div>
-  );
-};
 
 export default App;
