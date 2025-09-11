@@ -1,32 +1,50 @@
-// @ts-nocheck
-
 import { useState, useEffect, useRef } from "react";
 import clsx from "clsx";
-import { motion, AnimatePresence, useAnimation } from "framer-motion";
+import { motion, AnimatePresence, useAnimation } from "motion/react";
 
-import EntryGroup from "./components/EntryGroup";
+import Entry from "./components/Entry";
+import WinnerBar from "./components/WinnerBar";
+import WinnerCountdown from "./components/WinnerCountdown";
+
+import { spinAnimation } from "./helpers";
+
+import type { FormEvent } from "react";
+import type { EntriesType, WinnerType } from "./@types";
 
 import "./App.css";
 
 function App() {
-  const [ws, setWs] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [username, setUsername] = useState("");
-  const [entries, setEntries] = useState([]);
-  const [amount, setAmount] = useState("");
-  const [address, setAddress] = useState("");
-  const [spinning, setSpinning] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  // const [users, setUsers] = useState([]);
+  // const [username, setUsername] = useState("");
+  const [entries, setEntries] = useState<EntriesType>([]);
+  const [amount, setAmount] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
+  const [spinning, setSpinning] = useState<boolean>(false);
+  const [winner, setWinner] = useState<WinnerType | null>(null);
+  const [showWinner, setShowWinner] = useState<boolean>(false);
+  const [showCountdown, setShowCountdown] = useState<boolean>(false);
 
-  const containerRef = useRef(null);
-  const carouselRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
   const controls = useAnimation();
 
-  const maxEntries = 4;
-  const numOfloops = 20;
+  const numOfLoops = 15; // @TEMP
+
+  // Send message over web socket.
+  const sendSocketMessage = (msg: object) => {
+    const socket = wsRef.current;
+
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify(msg));
+    }
+  };
 
   useEffect(() => {
     // Connect to WebSocket server
     const socket = new WebSocket("ws://localhost:8080");
+
+    wsRef.current = socket;
 
     socket.onopen = () => {
       // Create some kind of welcome to the site popup
@@ -35,24 +53,14 @@ function App() {
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      // const { type } = data;
+      console.log("data type", data.type);
 
-      // if (data.type === "CURRENT_USERS") {
-      //   setUsers(data.users);
-      // } else if (data.type === "USERS_UPDATE") {
-      //   setUsers((prev) => [...prev, data.user]);
-      // } else if (data.type === "RAFFLE_ENTRIES") {
-      //   setEntries(data.entries);
-      // } else if (data.type === "ENTRIES_UPDATE") {
-      //   setEntries((prev) => [
-      //     ...prev,
-      //     { amount: data.amount, address: data.address },
-      //   ]);
-      // }
+      console.log("data", data);
 
       switch (data.type) {
         case "RAFFLE_ENTRIES":
           setEntries(data.entries);
+
           break;
 
         case "ENTRY_ACCEPTED":
@@ -60,16 +68,30 @@ function App() {
 
           setEntries((prev) => [
             ...prev,
-            { amount: data.amount, address: data.address },
+            { amount: data.amount, address: data.address, id: data.id },
           ]);
+
           break;
 
-        case "PICKING_WINNER":
+        case "POT_FULL":
+          setShowCountdown(true);
+
+          break;
+
+        // case "PICKING_WINNER":
+        //   break;
+
+        case "WINNER_CHOSEN":
+          const { type, ...rest } = data;
+
+          console.log(data);
+
+          setWinner(rest);
+
+          break;
 
         default:
           console.log("Unknown data.type");
-      }
-      if (data.type === "ENTRY_ACCEPTED") {
       }
     };
 
@@ -77,10 +99,11 @@ function App() {
       console.log("Disconnected from server");
     };
 
-    setWs(socket);
-
     // Cleanup on unmount
-    return () => socket.close();
+    return () => {
+      socket.close();
+      wsRef.current = null;
+    };
   }, []);
 
   // const checkingIn = (event: React.SyntheticEvent<HTMLFormElement>) => {
@@ -92,88 +115,110 @@ function App() {
   //   }
   // };
 
-  const enterRaffle = (event) => {
+  const enterRaffle = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    ws.send(
-      JSON.stringify({ type: "RAFFLE_ENTRY", amount: Number(amount), address })
-    );
+    sendSocketMessage({
+      type: "RAFFLE_ENTRY",
+      amount: Number(amount),
+      address,
+    });
 
     setAmount("");
     setAddress("");
   };
 
-  // Spin when entries reaches 5
-  useEffect(() => {
-    if (entries.length === maxEntries && !spinning) {
-      setTimeout(() => {
-        setSpinning(true);
-      }, 1000);
-    }
-  }, [entries, spinning]);
-
   // Spin animation
   useEffect(() => {
-    if (carouselRef.current && spinning) {
-      const totalWidth = containerRef.current.offsetWidth;
-
-      console.log(totalWidth);
+    if (carouselRef.current && containerRef.current && spinning && winner) {
+      const targetX = spinAnimation(
+        containerRef.current,
+        entries,
+        winner,
+        numOfLoops
+      );
 
       controls
         .start({
-          x: [-0, -totalWidth * (numOfloops - 1)],
+          x: [0, Math.round(targetX)],
           transition: {
             x: {
-              duration: 3, // adjust speed here
+              duration: 3,
               ease: [0.5, 0, 0, 1],
             },
           },
         })
         .then(() => {
-          // controls.set({ x: 0 });
-          // setEntries([]);
-          // setSpinning(false);
+          setShowWinner(true);
+
+          controls
+            .start({
+              opacity: 0,
+              transition: { duration: 0.5, delay: 5, ease: "easeInOut" },
+            })
+            .then(() => {
+              setEntries([]);
+              setSpinning(false);
+              setWinner(null);
+              setShowWinner(false);
+
+              controls.set({ x: 0, opacity: 1 });
+            });
         });
     }
-  }, [spinning, entries, controls]);
+  }, [spinning, entries, controls, winner]);
+
+  // .then(() => {
+  //         setTimeout(() => {
+  //           controls.
+  //         }, 5000)
+  //       })
 
   const renderEntries = spinning
-    ? Array(numOfloops + 1)
+    ? Array(numOfLoops + 1)
         .fill(entries)
         .flat()
     : entries;
 
   return (
     <div className="p-4">
-      <div
-        ref={containerRef}
-        className=" overflow-hidden max-w-[640px] w-[640px] rounded-full mb-4 bg-black"
-      >
-        <motion.div
-          ref={carouselRef}
-          className={clsx(
-            "flex h-[30px]",
-            entries.length > 1 && "flex-row-reverse",
-            !spinning && "w-full"
-          )}
-          style={spinning ? { width: `${(numOfloops + 1) * 100}%` } : {}}
-          animate={controls}
-        >
-          <AnimatePresence>
-            {renderEntries.map((entry, index) => {
-              const originalIndex = index % entries.length;
+      <WinnerBar winner={winner} showWinner={showWinner} />
 
-              return (
-                <EntryGroup
-                  key={index}
-                  entry={entry}
-                  index={originalIndex}
-                  spinning={spinning}
-                />
-              );
-            })}
-          </AnimatePresence>
-        </motion.div>
+      {showCountdown && (
+        <WinnerCountdown
+          setShowCountdown={setShowCountdown}
+          setSpinning={setSpinning}
+        />
+      )}
+
+      <div className="mt-6 mb-4 overflow-hidden rounded-full border-2 border-black shadow-md">
+        <div ref={containerRef} className="bet-bar">
+          <motion.div
+            ref={carouselRef}
+            className={clsx(
+              "flex h-[30px]",
+              // entries.length > 1 && "flex-row-reverse",
+              !spinning && "w-full"
+            )}
+            style={spinning ? { width: `${(numOfLoops + 1) * 100}%` } : {}}
+            animate={controls}
+          >
+            <AnimatePresence>
+              {renderEntries.map((entry, index) => {
+                const originalIndex = index % entries.length;
+
+                return (
+                  <Entry
+                    key={index}
+                    entry={entry}
+                    index={originalIndex}
+                    spinning={spinning}
+                  />
+                );
+              })}
+            </AnimatePresence>
+          </motion.div>
+        </div>
       </div>
 
       <h1 className="text-4xl font-bold">🎟️ Raffle Updates</h1>
@@ -190,34 +235,35 @@ function App() {
         </button>
       </form> */}
 
-      <form className="flex gap-2 mt-4 justify-center" onSubmit={enterRaffle}>
+      <form className="mt-4 flex justify-center gap-2" onSubmit={enterRaffle}>
         <input
-          className="bg-white rounded-sm p-1 leading-1 text-black outline-0"
+          className="rounded-sm bg-white p-1 leading-1 text-black outline-0"
           type="number"
           value={amount}
+          min="1"
           max="50"
           onChange={(event) => setAmount(event.target.value)}
         />
 
         <input
-          className="bg-white rounded-sm p-1 leading-1 text-black outline-0"
+          className="rounded-sm bg-white p-1 leading-1 text-black outline-0"
           type="text"
           value={address}
           onChange={(event) => setAddress(event.target.value)}
         />
 
-        <button className="px-4 py-2 bg-green-400 text-black cursor-pointer hover:bg-green-300 transition-colors font-medium rounded-lg">
+        <button className="cursor-pointer rounded-lg bg-green-400 px-4 py-2 font-medium text-black transition-colors hover:bg-green-300">
           Enter
         </button>
       </form>
 
-      <ul className="mt-4 space-y-2">
+      {/* <ul className="mt-4 space-y-2">
         {users.map((user, i) => (
-          <li key={i} className="p-2 bg-gray-100 rounded">
+          <li key={i} className="rounded bg-gray-100 p-2">
             {user} has checked in!
           </li>
         ))}
-      </ul>
+      </ul> */}
     </div>
   );
 }

@@ -6,9 +6,11 @@
   "type": "module",
   "scripts": {
     "start": "nodemon server.js",
-    "dev": "cd app && yarn dev"
+    "dev": "cd app && yarn dev",
+    "both": "concurrently \"yarn run start\" \"yarn run dev\""
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "crypto": "^1.0.1",
     "nodemon": "^3.1.10",
     "uuid": "^11.1.0",
