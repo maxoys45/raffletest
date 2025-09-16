@@ -1,23 +1,29 @@
-// @ts-nocheck
-
 import { motion } from "motion/react";
 
-import { barColors } from "../helpers";
+import type { EntryType } from "../@types";
 
-const Entry = ({ entry, index, spinning }) => {
+const Entry = ({
+  entry,
+  index,
+  spinning,
+}: {
+  entry: EntryType;
+  index: number;
+  spinning: boolean;
+}) => {
   return (
-    <motion.div
-      className="shrink-0 basis-0 border-1 border-t-0 border-b-0 border-black"
-      initial={spinning ? false : { flexGrow: 0 }}
-      animate={{
-        flexGrow: entry.amount,
-        transition: spinning
-          ? { duration: 0 }
-          : { duration: 0.5, ease: "easeInOut" },
-      }}
-      exit={spinning ? {} : { flexGrow: 0 }}
-      style={{ backgroundColor: barColors[index] }}
-    ></motion.div>
+    <>
+      <motion.div
+        className="shrink-0 basis-0 border-1 border-t-0 border-b-0 border-black"
+        initial={spinning ? undefined : { flexGrow: 0 }}
+        animate={{ flexGrow: entry.amount }}
+        transition={{ duration: spinning ? 0 : 0.5, ease: "easeInOut" }}
+        style={{ backgroundColor: entry.color }}
+        data-tooltip-id="entry-tooltip"
+        data-tooltip-content={entry.amount}
+        data-tooltip-variant="light"
+      ></motion.div>
+    </>
   );
 };
 

@@ -21,6 +21,7 @@ export const pickRandomWinner = (entries) => {
   }
 };
 
+// Get the data for the winning bet.
 export const winnerData = (winner, entries) => {
   const totalTickets = entries.reduce((acc, curr) => acc + curr.amount, 0);
 
@@ -37,7 +38,30 @@ export const winnerData = (winner, entries) => {
     id: winner.id,
     index: winner.index,
     alias: winner.address,
+    color: winner.color,
     chance: winnerChance,
     value: Number(winnerValue.toFixed(2)),
   };
 };
+
+// Random whole number between 2 numbers.
+export const getRandomArbitrary = (min, max) => {
+  const minInt = Math.ceil(min);
+  const maxInt = Math.floor(max);
+
+  return Math.floor(Math.random() * (maxInt - minInt) + minInt);
+};
+
+// Colors used for the spinning bar.
+export const barColors = [
+  "#c2e2ef",
+  "#6c2a38",
+  "#f3c52a",
+  "#b47db6",
+  "#f1634b",
+  "#077ca7",
+  "#75bf44",
+  "#dd5386",
+  "#3ebcec",
+  "#6c6aab",
+];

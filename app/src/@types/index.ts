@@ -1,7 +1,8 @@
-type EntryType = {
+export type EntryType = {
   address: string;
   amount: number;
   id: string;
+  color: string;
 };
 
 export type EntriesType = EntryType[];
@@ -12,4 +13,5 @@ export type WinnerType = {
   id: string;
   index: number;
   value: number;
+  color: string;
 };

@@ -45,11 +45,11 @@
 
 @layer components {
   .bet-bar {
-    @apply relative w-[640px] max-w-[640px] bg-black before:bottom-0 before:border-b-[8px] after:top-0 after:border-t-[8px];
+    @apply relative mx-[-1px] bg-black before:bottom-0 before:border-b-[8px] after:top-0 after:border-t-[8px];
 
     &::before,
     &::after {
-      @apply absolute left-1/2 z-10 h-0 w-0 -translate-x-1/2 border-r-[6px] border-l-[6px] border-black border-r-transparent border-l-transparent content-[''];
+      @apply pointer-events-none absolute left-1/2 z-10 h-0 w-0 -translate-x-1/2 border-r-[6px] border-l-[6px] border-black border-r-transparent border-l-transparent content-[''];
     }
   }
 }

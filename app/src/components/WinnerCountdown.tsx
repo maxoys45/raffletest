@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 const WinnerCountdown = ({ setShowCountdown, setSpinning }) => {
-  const [count, setCount] = useState<number>(2);
+  const [count, setCount] = useState<number>(5);
 
   useEffect(() => {
     if (count <= 0) {

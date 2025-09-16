@@ -5,18 +5,37 @@ export const toPercent = (decimal: number, decimals: number = 0) => {
   return `${(decimal * 100).toFixed(decimals)}%`;
 };
 
+// Random whole number between 2 numbers.
+export const getRandomArbitrary = (min: number, max: number): number => {
+  const minInt = Math.ceil(min);
+  const maxInt = Math.floor(max);
+
+  return Math.floor(Math.random() * (maxInt - minInt) + minInt);
+};
+
 // Colors used for the spinning bar.
 export const barColors = [
-  "#FF0000",
-  "#00FFFF",
-  "#FF8000",
-  "#0080FF",
-  "#FFFF00",
-  "#8000FF",
-  "#80FF00",
-  "#FF00FF",
-  "#00FF80",
-  "#FF0080",
+  // "#FF0000",
+  // "#00FFFF",
+  // "#FF8000",
+  // "#0080FF",
+  // "#FFFF00",
+  // "#8000FF",
+  // "#80FF00",
+  // "#FF00FF",
+  // "#00FF80",
+  // "#FF0080",
+
+  "#c2e2ef",
+  "#6c2a38",
+  "#f3c52a",
+  "#b47db6",
+  "#f1634b",
+  "#077ca7",
+  "#75bf44",
+  "#dd5386",
+  "#3ebcec",
+  "#6c6aab",
 ];
 
 export const spinAnimation = (

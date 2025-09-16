@@ -1,6 +1,6 @@
 import clsx from "clsx";
 
-import { toPercent, barColors } from "../helpers";
+import { toPercent } from "../helpers";
 
 import type { WinnerType } from "../@types";
 
@@ -19,11 +19,12 @@ const WinnerBar = ({
       )}
     >
       <span>The winner is</span>
+
       <span className="flex items-center gap-2 rounded-md bg-gray-950 px-2 py-0.5">
         <span
           className="block h-[14px] w-[14px] rounded-full"
           style={{
-            backgroundColor: winner ? barColors[winner.index] : "#FFFFFF",
+            backgroundColor: winner ? winner.color : "#FFFFFF",
           }}
         ></span>
         {winner ? winner.alias : ""}

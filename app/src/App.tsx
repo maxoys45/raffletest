@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import clsx from "clsx";
-import { motion, AnimatePresence, useAnimation } from "motion/react";
+import { motion, animate } from "motion/react";
+import { Tooltip } from "react-tooltip";
 
 import Entry from "./components/Entry";
 import WinnerBar from "./components/WinnerBar";
@@ -18,6 +19,7 @@ function App() {
   // const [users, setUsers] = useState([]);
   // const [username, setUsername] = useState("");
   const [entries, setEntries] = useState<EntriesType>([]);
+  const [queuedEntries, setQueuedEntries] = useState<EntriesType>([]);
   const [amount, setAmount] = useState<string>("");
   const [address, setAddress] = useState<string>("");
   const [spinning, setSpinning] = useState<boolean>(false);
@@ -27,7 +29,6 @@ function App() {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
-  const controls = useAnimation();
 
   const numOfLoops = 15; // @TEMP
 
@@ -68,7 +69,30 @@ function App() {
 
           setEntries((prev) => [
             ...prev,
-            { amount: data.amount, address: data.address, id: data.id },
+            {
+              amount: data.amount,
+              address: data.address,
+              id: data.id,
+              color: data.color,
+            },
+          ]);
+
+          break;
+
+        case "QUEUED_ENTRIES":
+          setQueuedEntries(data.entries);
+
+          break;
+
+        case "QUEUED_ENTRY":
+          setQueuedEntries((prev) => [
+            ...prev,
+            {
+              amount: data.amount,
+              address: data.address,
+              id: data.id,
+              color: data.color,
+            },
           ]);
 
           break;
@@ -138,41 +162,31 @@ function App() {
         numOfLoops
       );
 
-      controls
-        .start({
-          x: [0, Math.round(targetX)],
-          transition: {
-            x: {
-              duration: 3,
-              ease: [0.5, 0, 0, 1],
-            },
-          },
-        })
-        .then(() => {
-          setShowWinner(true);
+      animate(
+        carouselRef.current,
+        { x: [0, Math.round(targetX)] },
+        { duration: 3, ease: [0.5, 0, 0, 1] }
+      ).then(() => {
+        setShowWinner(true);
 
-          controls
-            .start({
-              opacity: 0,
-              transition: { duration: 0.5, delay: 5, ease: "easeInOut" },
-            })
-            .then(() => {
-              setEntries([]);
-              setSpinning(false);
-              setWinner(null);
-              setShowWinner(false);
+        animate(
+          carouselRef.current!,
+          { opacity: 0 },
+          { duration: 0.5, delay: 5, ease: "easeInOut" }
+        ).then(() => {
+          setSpinning(false);
+          setWinner(null);
+          setShowWinner(false);
 
-              controls.set({ x: 0, opacity: 1 });
-            });
+          animate(carouselRef.current!, { x: 0, opacity: 1 });
+
+          sendSocketMessage({
+            type: "POT_RESET",
+          });
         });
+      });
     }
-  }, [spinning, entries, controls, winner]);
-
-  // .then(() => {
-  //         setTimeout(() => {
-  //           controls.
-  //         }, 5000)
-  //       })
+  }, [spinning, entries, winner]);
 
   const renderEntries = spinning
     ? Array(numOfLoops + 1)
@@ -182,6 +196,8 @@ function App() {
 
   return (
     <div className="p-4">
+      <h1 className="text-4xl font-bold">🎟️ EZ KDA</h1>
+
       <WinnerBar winner={winner} showWinner={showWinner} />
 
       {showCountdown && (
@@ -191,21 +207,18 @@ function App() {
         />
       )}
 
-      <div className="mt-6 mb-4 overflow-hidden rounded-full border-2 border-black shadow-md">
-        <div ref={containerRef} className="bet-bar">
-          <motion.div
-            ref={carouselRef}
-            className={clsx(
-              "flex h-[30px]",
-              // entries.length > 1 && "flex-row-reverse",
-              !spinning && "w-full"
-            )}
-            style={spinning ? { width: `${(numOfLoops + 1) * 100}%` } : {}}
-            animate={controls}
-          >
-            <AnimatePresence>
+      <div>
+        <div className="mx-auto mt-6 mb-4 max-w-[644px] overflow-hidden rounded-full border-2 border-black shadow-md">
+          <div ref={containerRef} className="bet-bar">
+            <motion.div
+              ref={carouselRef}
+              className={clsx("flex h-[30px]", !spinning && "w-full")}
+              style={spinning ? { width: `${(numOfLoops + 1) * 100}%` } : {}}
+            >
               {renderEntries.map((entry, index) => {
                 const originalIndex = index % entries.length;
+
+                console.log("entry", entry);
 
                 return (
                   <Entry
@@ -216,12 +229,16 @@ function App() {
                   />
                 );
               })}
-            </AnimatePresence>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
-      </div>
 
-      <h1 className="text-4xl font-bold">🎟️ Raffle Updates</h1>
+        <Tooltip
+          id="entry-tooltip"
+          float="true"
+          style={{ padding: "0.2em 0.5em", fontWeight: "bold", zIndex: 20 }}
+        />
+      </div>
 
       {/* <form onSubmit={checkingIn}>
         <input
@@ -264,6 +281,30 @@ function App() {
           </li>
         ))}
       </ul> */}
+
+      <div className="mt-10 grid grid-cols-2 gap-2">
+        <div className="">
+          <h2>Entries:</h2>
+          <ul className="">
+            {entries.map((entry, index) => (
+              <li key={index}>
+                {entry.id}: {entry.amount}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="">
+          <h2>Queue:</h2>
+          <ul className="">
+            {queuedEntries.map((entry, index) => (
+              <li key={index}>
+                {entry.id}: {entry.amount}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
