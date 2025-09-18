@@ -1,4 +1,4 @@
-import { WebSocketServer } from "ws";
+import WebSocket, { WebSocketServer } from "ws";
 import { v4 as uuidv4 } from "uuid";
 
 import { pickRandomWinner, winnerData, barColors } from "./helpers/raffle.js";
@@ -7,36 +7,32 @@ import { RAFFLE_MAX_PLAYERS } from "./shared/config.js";
 const wss = new WebSocketServer({ port: 8080 });
 
 const globals = {
-  // Users
-  // currentUsers: [],
-  // Raffle
-  currentEntries: [],
-  queuedEntries: [],
-  pickingWinner: false,
   availableColors: [...barColors],
-  potFull: false,
+  phaseTimer: null,
+};
+
+const gameState = {
+  pot: [],
+  queued: [],
+  status: "OPEN",
+  countdownEndsAt: null,
+  winner: null,
 };
 
 wss.on("connection", (ws) => {
   console.log("Client connected");
 
-  // Send current raffle state to new client
-  // ws.send(JSON.stringify({ type: "CURRENT_USERS", users: globals.currentUsers }));
-
   ws.send(
-    JSON.stringify({ type: "RAFFLE_ENTRIES", entries: globals.currentEntries })
+    JSON.stringify({
+      type: "GAME_STATE",
+      state: gameState,
+    })
   );
-  ws.send(
-    JSON.stringify({ type: "QUEUED_ENTRIES", entries: globals.queuedEntries })
-  );
-
-  if (globals.potFull) {
-    ws.send(JSON.stringify({ type: "POT_FULL" }));
-  }
 
   // Listen for messages from client
   ws.on("message", (msg) => {
     const data = JSON.parse(msg);
+
     console.log("Received:", data);
 
     // if (data.type === "CHECKING_IN") {
@@ -50,11 +46,28 @@ wss.on("connection", (ws) => {
     if (data.type === "RAFFLE_ENTRY") {
       const { amount, address } = data;
 
-      handleNewEntry({ amount, address, id: uuidv4(), color: assignColor() });
-    }
+      const entry = {
+        id: uuidv4(),
+        address,
+        amount,
+        color: assignColor(),
+      };
 
-    if (data.type === "POT_RESET") {
-      resetPot();
+      if (gameState.status === "OPEN") {
+        gameState.pot.push(entry);
+
+        if (gameState.pot.length >= RAFFLE_MAX_PLAYERS) {
+          advanceGame("COUNTDOWN");
+        } else {
+          broadcastGameState();
+        }
+      } else {
+        gameState.queued.push(entry);
+
+        broadcastGameState();
+      }
+    } else {
+      console.log("Unknown message type:", data.type);
     }
   });
 
@@ -64,16 +77,20 @@ wss.on("connection", (ws) => {
 });
 
 // Broadcast helper function
-const broadcast = (data) => {
+const broadcastGameState = () => {
   wss.clients.forEach((client) => {
-    if (client.readyState === client.OPEN) {
-      console.log(data);
-
-      client.send(JSON.stringify(data));
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(
+        JSON.stringify({
+          type: "GAME_STATE",
+          state: gameState,
+        })
+      );
     }
   });
 };
 
+// Assign a random color to a bet which hasn't been used yet in the current pot.
 const assignColor = () => {
   const index = Math.floor(Math.random() * globals.availableColors.length);
   const color = globals.availableColors[index];
@@ -83,92 +100,130 @@ const assignColor = () => {
   return color;
 };
 
+// Advance the raffle to the next phase.
+const advanceGame = (nextStatus) => {
+  let durationMs = null;
+
+  if (globals.phaseTimer) clearTimeout(globals.phaseTimer);
+
+  gameState.status = nextStatus;
+
+  switch (nextStatus) {
+    case "COUNTDOWN":
+      durationMs = 5000;
+      gameState.countdownEndsAt = Date.now() + durationMs;
+
+      break;
+
+    case "SPINNING":
+      durationMs = 3000;
+      gameState.winner = pickWinner(gameState.pot);
+
+      break;
+
+    case "SHOW_WINNER":
+      durationMs = 5000;
+
+      break;
+      1;
+
+    case "OPEN":
+      durationMs = null;
+
+      gameState.pot = [];
+      gameState.queued = gameState.queued;
+      gameState.status = "OPEN";
+      gameState.countdownEndsAt = null;
+      gameState.winner = null;
+
+      break;
+  }
+
+  broadcastGameState();
+
+  if (durationMs) {
+    globals.phaseTimer = setTimeout(() => {
+      if (nextStatus === "COUNTDOWN") {
+        advanceGame("SPINNING");
+      } else if (nextStatus === "SPINNING") {
+        advanceGame("SHOW_WINNER");
+      } else if (nextStatus === "SHOW_WINNER") {
+        advanceGame("OPEN");
+      }
+    }, durationMs);
+  }
+};
+
+const pickWinner = (entries) => {
+  const winner = pickRandomWinner(entries);
+
+  return winnerData(winner, entries);
+};
+
 // Handle new raffle entry
-const handleNewEntry = (entry) => {
-  let broadcastType;
+// const handleNewEntry = (entry) => {
+//   let broadcastType;
 
-  if (globals.pickingWinner) {
-    globals.queuedEntries.push(entry);
+//   if (globals.pickingWinner) {
+//     globals.queuedEntries.push(entry);
 
-    broadcastType = "QUEUED_ENTRY";
-  } else {
-    globals.currentEntries.push(entry);
+//     broadcastType = "QUEUED_ENTRY";
+//   } else {
+//     globals.currentEntries.push(entry);
 
-    broadcastType = "ENTRY_ACCEPTED";
-  }
+//     broadcastType = "ENTRY_ACCEPTED";
+//   }
 
-  broadcast({
-    type: broadcastType,
-    id: entry.id,
-    amount: entry.amount,
-    address: entry.address,
-    color: entry.color,
-  });
+//   broadcast({
+//     type: broadcastType,
+//     id: entry.id,
+//     amount: entry.amount,
+//     address: entry.address,
+//     color: entry.color,
+//   });
 
-  shouldPickWinner();
-};
+//   shouldPickWinner();
+// };
 
-const shouldPickWinner = () => {
-  if (
-    !globals.pickingWinner &&
-    globals.currentEntries?.length >= RAFFLE_MAX_PLAYERS
-  ) {
-    broadcast({ type: "POT_FULL" });
+// const shouldPickWinner = () => {
+//   if (
+//     !globals.pickingWinner &&
+//     globals.currentEntries?.length >= RAFFLE_MAX_PLAYERS
+//   ) {
+//     broadcast({ type: "POT_FULL" });
 
-    globals.potFull = true;
+//     globals.potFull = true;
 
-    pickWinner();
-  }
-};
+//     pickWinner();
+//   }
+// };
 
-const pickWinner = () => {
-  globals.pickingWinner = true;
+// const resetPot = () => {
+//   globals.pickingWinner = false;
+//   globals.currentEntries = [];
+//   globals.availableColors = [...barColors];
+//   globals.potFull = false;
 
-  // broadcast({ type: "PICKING_WINNER", entries: globals.currentEntries });
+//   if (globals.queuedEntries.length) {
+//     globals.currentEntries = globals.queuedEntries.splice(
+//       0,
+//       RAFFLE_MAX_PLAYERS
+//     );
+//   }
 
-  const winner = pickRandomWinner(globals.currentEntries);
+//   console.log("queue", globals.queuedEntries);
 
-  broadcast({
-    type: "WINNER_CHOSEN",
-    ...winnerData(winner, globals.currentEntries),
-  });
+//   broadcast({
+//     type: "RAFFLE_ENTRIES",
+//     entries: globals.currentEntries,
+//   });
 
-  // globals.currentEntries = globals.queuedEntries.splice(0, RAFFLE_MAX_PLAYERS);
+//   broadcast({
+//     type: "QUEUED_ENTRIES",
+//     entries: globals.queuedEntries,
+//   });
 
-  // globals.pickingWinner = false;
-
-  // If the pot is full again, pick another winner.
-  // if (globals.currentEntries.length >= RAFFLE_MAX_PLAYERS) {
-  //   pickWinner();
-  // }
-};
-
-const resetPot = () => {
-  globals.pickingWinner = false;
-  globals.currentEntries = [];
-  globals.availableColors = [...barColors];
-  globals.potFull = false;
-
-  if (globals.queuedEntries.length) {
-    globals.currentEntries = globals.queuedEntries.splice(
-      0,
-      RAFFLE_MAX_PLAYERS
-    );
-  }
-
-  console.log("queue", globals.queuedEntries);
-
-  broadcast({
-    type: "RAFFLE_ENTRIES",
-    entries: globals.currentEntries,
-  });
-
-  broadcast({
-    type: "QUEUED_ENTRIES",
-    entries: globals.queuedEntries,
-  });
-
-  shouldPickWinner();
-};
+//   shouldPickWinner();
+// };
 
 console.log("WebSocket server running on ws://localhost:8080");

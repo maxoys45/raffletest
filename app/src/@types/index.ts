@@ -15,3 +15,5 @@ export type WinnerType = {
   value: number;
   color: string;
 };
+
+export type StatusType = "OPEN" | "COUNTDOWN" | "SPINNING" | "SHOW_WINNER";

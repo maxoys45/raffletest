@@ -10,7 +10,7 @@ import WinnerCountdown from "./components/WinnerCountdown";
 import { spinAnimation } from "./helpers";
 
 import type { FormEvent } from "react";
-import type { EntriesType, WinnerType } from "./@types";
+import type { EntriesType, StatusType, WinnerType } from "./@types";
 
 import "./App.css";
 
@@ -20,12 +20,14 @@ function App() {
   // const [username, setUsername] = useState("");
   const [entries, setEntries] = useState<EntriesType>([]);
   const [queuedEntries, setQueuedEntries] = useState<EntriesType>([]);
-  const [amount, setAmount] = useState<string>("");
-  const [address, setAddress] = useState<string>("");
+  const [status, setStatus] = useState<StatusType>("");
   const [spinning, setSpinning] = useState<boolean>(false);
   const [winner, setWinner] = useState<WinnerType | null>(null);
   const [showWinner, setShowWinner] = useState<boolean>(false);
-  const [showCountdown, setShowCountdown] = useState<boolean>(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+
+  const [amount, setAmount] = useState<string>("");
+  const [address, setAddress] = useState<string>("");
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
@@ -48,75 +50,112 @@ function App() {
     wsRef.current = socket;
 
     socket.onopen = () => {
-      // Create some kind of welcome to the site popup
+      console.log("Connected to server");
     };
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      console.log("data type", data.type);
+      if (data.type === "GAME_STATE") {
+        const { state } = data;
 
-      console.log("data", data);
+        console.table(state);
 
-      switch (data.type) {
-        case "RAFFLE_ENTRIES":
-          setEntries(data.entries);
+        setStatus(state.status);
 
-          break;
+        setEntries(state.pot);
 
-        case "ENTRY_ACCEPTED":
-          console.log(`amount=${data.amount} address=${data.address}`);
+        setQueuedEntries(state.queued);
 
-          setEntries((prev) => [
-            ...prev,
-            {
-              amount: data.amount,
-              address: data.address,
-              id: data.id,
-              color: data.color,
-            },
-          ]);
+        setSpinning(state.status === "SPINNING");
 
-          break;
+        setShowWinner(state.status === "SHOW_WINNER");
 
-        case "QUEUED_ENTRIES":
-          setQueuedEntries(data.entries);
+        setWinner(state.winner);
 
-          break;
+        switch (state.status) {
+          case "OPEN":
+            break;
 
-        case "QUEUED_ENTRY":
-          setQueuedEntries((prev) => [
-            ...prev,
-            {
-              amount: data.amount,
-              address: data.address,
-              id: data.id,
-              color: data.color,
-            },
-          ]);
+          case "COUNTDOWN":
+            if (state.countdownEndsAt) {
+              setCountdown(state.countdownEndsAt);
+            }
 
-          break;
+            break;
 
-        case "POT_FULL":
-          setShowCountdown(true);
+          case "SPINNING":
+            break;
 
-          break;
+          case "SHOW_WINNER":
+            setCountdown(null);
 
-        // case "PICKING_WINNER":
-        //   break;
+            break;
 
-        case "WINNER_CHOSEN":
-          const { type, ...rest } = data;
-
-          console.log(data);
-
-          setWinner(rest);
-
-          break;
-
-        default:
-          console.log("Unknown data.type");
+          default:
+            console.log("Unknown status");
+        }
       }
+
+      // switch (data.type) {
+      //   case "RAFFLE_ENTRIES":
+      //     setEntries(data.entries);
+
+      //     break;
+
+      //   case "ENTRY_ACCEPTED":
+      //     console.log(`amount=${data.amount} address=${data.address}`);
+
+      //     setEntries((prev) => [
+      //       ...prev,
+      //       {
+      //         amount: data.amount,
+      //         address: data.address,
+      //         id: data.id,
+      //         color: data.color,
+      //       },
+      //     ]);
+
+      //     break;
+
+      //   case "QUEUED_ENTRIES":
+      //     setQueuedEntries(data.entries);
+
+      //     break;
+
+      //   case "QUEUED_ENTRY":
+      //     setQueuedEntries((prev) => [
+      //       ...prev,
+      //       {
+      //         amount: data.amount,
+      //         address: data.address,
+      //         id: data.id,
+      //         color: data.color,
+      //       },
+      //     ]);
+
+      //     break;
+
+      //   case "POT_FULL":
+      //     setCountdown(true);
+
+      //     break;
+
+      //   // case "PICKING_WINNER":
+      //   //   break;
+
+      //   case "WINNER_CHOSEN":
+      //     const { type, ...rest } = data;
+
+      //     console.log(data);
+
+      //     setWinner(rest);
+
+      //     break;
+
+      //   default:
+      //     console.log("Unknown data.type");
+      // }
     };
 
     socket.onclose = () => {
@@ -139,6 +178,7 @@ function App() {
   //   }
   // };
 
+  // A user enters the raffle.
   const enterRaffle = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -154,39 +194,40 @@ function App() {
 
   // Spin animation
   useEffect(() => {
-    if (carouselRef.current && containerRef.current && spinning && winner) {
-      const targetX = spinAnimation(
-        containerRef.current,
-        entries,
-        winner,
-        numOfLoops
-      );
+    if (!carouselRef.current || !containerRef.current || !winner) return;
 
-      animate(
-        carouselRef.current,
-        { x: [0, Math.round(targetX)] },
-        { duration: 3, ease: [0.5, 0, 0, 1] }
-      ).then(() => {
-        setShowWinner(true);
+    switch (status) {
+      case "SPINNING":
+        const targetX = spinAnimation(
+          containerRef.current,
+          entries,
+          winner,
+          numOfLoops
+        );
 
         animate(
-          carouselRef.current!,
+          carouselRef.current,
+          { x: [0, Math.round(targetX)] },
+          { duration: 3, ease: [0.5, 0, 0, 1] }
+        );
+
+        break;
+
+      case "SHOW_WINNER":
+        animate(
+          carouselRef.current,
           { opacity: 0 },
-          { duration: 0.5, delay: 5, ease: "easeInOut" }
-        ).then(() => {
-          setSpinning(false);
-          setWinner(null);
-          setShowWinner(false);
+          { duration: 0.5, ease: "easeInOut" }
+        );
 
-          animate(carouselRef.current!, { x: 0, opacity: 1 });
+        break;
 
-          sendSocketMessage({
-            type: "POT_RESET",
-          });
-        });
-      });
+      case "OPEN":
+        animate(carouselRef.current, { x: 0, opacity: 1 });
+
+        break;
     }
-  }, [spinning, entries, winner]);
+  }, [status, entries, winner]);
 
   const renderEntries = spinning
     ? Array(numOfLoops + 1)
@@ -196,16 +237,11 @@ function App() {
 
   return (
     <div className="p-4">
-      <h1 className="text-4xl font-bold">🎟️ EZ KDA</h1>
+      <h1 className="mb-6 text-4xl font-bold">🎟️ EZ KDA</h1>
 
       <WinnerBar winner={winner} showWinner={showWinner} />
 
-      {showCountdown && (
-        <WinnerCountdown
-          setShowCountdown={setShowCountdown}
-          setSpinning={setSpinning}
-        />
-      )}
+      {countdown && <WinnerCountdown countdown={countdown} />}
 
       <div>
         <div className="mx-auto mt-6 mb-4 max-w-[644px] overflow-hidden rounded-full border-2 border-black shadow-md">
@@ -217,8 +253,6 @@ function App() {
             >
               {renderEntries.map((entry, index) => {
                 const originalIndex = index % entries.length;
-
-                console.log("entry", entry);
 
                 return (
                   <Entry
