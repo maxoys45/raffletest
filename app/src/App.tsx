@@ -16,6 +16,7 @@ import "./App.css";
 
 function App() {
   const wsRef = useRef<WebSocket | null>(null);
+  const prevSpinning = useRef<boolean>(false);
   // const [users, setUsers] = useState([]);
   // const [username, setUsername] = useState("");
   const [entries, setEntries] = useState<EntriesType>([]);
@@ -25,6 +26,7 @@ function App() {
   const [winner, setWinner] = useState<WinnerType | null>(null);
   const [showWinner, setShowWinner] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [animatedEntries, setAnimatedEntries] = useState<EntriesType>([]);
 
   const [amount, setAmount] = useState<string>("");
   const [address, setAddress] = useState<string>("");
@@ -173,19 +175,26 @@ function App() {
     setAddress("");
   };
 
+  // Setup the animated entries.
+  useEffect(() => {
+    if (spinning && winner && !prevSpinning.current) {
+      setAnimatedEntries(entries);
+    }
+
+    prevSpinning.current = spinning;
+  }, [spinning, winner, entries]);
+
   // Spin animation
   useEffect(() => {
     if (!carouselRef.current || !containerRef.current) return;
 
-    console.log("STATUS", status);
-
     switch (status) {
       case "SPINNING":
-        if (!winner) return;
+        if (!winner || !animatedEntries.length) return;
 
         const targetX = spinAnimation(
           containerRef.current,
-          entries,
+          animatedEntries,
           winner,
           numOfLoops
         );
@@ -215,21 +224,17 @@ function App() {
 
         break;
     }
-  }, [status, entries, winner]);
+  }, [status, animatedEntries, winner]);
 
   const renderEntries = spinning
     ? Array(numOfLoops + 1)
-        .fill(entries)
+        .fill(animatedEntries)
         .flat()
     : entries;
 
   return (
     <div className="p-4">
       <h1 className="mb-6 text-4xl font-bold">🎟️ EZ KDA</h1>
-
-      <WinnerBar winner={winner} showWinner={showWinner} />
-
-      {countdown && <WinnerCountdown countdown={countdown} />}
 
       <div>
         <div className="mx-auto mt-6 mb-4 max-w-[644px] overflow-hidden rounded-full border-2 border-black shadow-md">
@@ -252,6 +257,10 @@ function App() {
           style={{ padding: "0.2em 0.5em", fontWeight: "bold", zIndex: 20 }}
         />
       </div>
+
+      <WinnerBar winner={winner} showWinner={showWinner} />
+
+      {countdown && <WinnerCountdown countdown={countdown} />}
 
       {/* <form onSubmit={checkingIn}>
         <input
