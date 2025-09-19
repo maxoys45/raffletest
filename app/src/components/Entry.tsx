@@ -4,11 +4,9 @@ import type { EntryType } from "../@types";
 
 const Entry = ({
   entry,
-  index,
   spinning,
 }: {
   entry: EntryType;
-  index: number;
   spinning: boolean;
 }) => {
   return (

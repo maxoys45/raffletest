@@ -67,34 +67,15 @@ function App() {
 
         setQueuedEntries(state.queued);
 
-        setSpinning(state.status === "SPINNING");
+        setCountdown(state.countdownEndsAt);
+
+        setSpinning(
+          state.status === "SPINNING" || state.status === "SHOW_WINNER"
+        );
 
         setShowWinner(state.status === "SHOW_WINNER");
 
         setWinner(state.winner);
-
-        switch (state.status) {
-          case "OPEN":
-            break;
-
-          case "COUNTDOWN":
-            if (state.countdownEndsAt) {
-              setCountdown(state.countdownEndsAt);
-            }
-
-            break;
-
-          case "SPINNING":
-            break;
-
-          case "SHOW_WINNER":
-            setCountdown(null);
-
-            break;
-
-          default:
-            console.log("Unknown status");
-        }
       }
 
       // switch (data.type) {
@@ -194,10 +175,14 @@ function App() {
 
   // Spin animation
   useEffect(() => {
-    if (!carouselRef.current || !containerRef.current || !winner) return;
+    if (!carouselRef.current || !containerRef.current) return;
+
+    console.log("STATUS", status);
 
     switch (status) {
       case "SPINNING":
+        if (!winner) return;
+
         const targetX = spinAnimation(
           containerRef.current,
           entries,
@@ -208,17 +193,20 @@ function App() {
         animate(
           carouselRef.current,
           { x: [0, Math.round(targetX)] },
-          { duration: 3, ease: [0.5, 0, 0, 1] }
+          {
+            duration: import.meta.env.VITE_RAFFLE_TIMINGS_SPIN_DURATION / 1000,
+            ease: [0.5, 0, 0, 1],
+          }
         );
 
         break;
 
       case "SHOW_WINNER":
-        animate(
-          carouselRef.current,
-          { opacity: 0 },
-          { duration: 0.5, ease: "easeInOut" }
-        );
+        // animate(
+        //   carouselRef.current,
+        //   { opacity: 0 },
+        //   { duration: 0.5, ease: "easeInOut" }
+        // );
 
         break;
 
@@ -252,16 +240,7 @@ function App() {
               style={spinning ? { width: `${(numOfLoops + 1) * 100}%` } : {}}
             >
               {renderEntries.map((entry, index) => {
-                const originalIndex = index % entries.length;
-
-                return (
-                  <Entry
-                    key={index}
-                    entry={entry}
-                    index={originalIndex}
-                    spinning={spinning}
-                  />
-                );
+                return <Entry key={index} entry={entry} spinning={spinning} />;
               })}
             </motion.div>
           </div>

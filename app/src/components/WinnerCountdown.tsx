@@ -6,6 +6,8 @@ const WinnerCountdown = ({ countdown }: { countdown: number }) => {
   useEffect(() => {
     if (!countdown) return;
 
+    console.table(countdown, Date.now());
+
     const timer = setInterval(() => {
       const msRemaining = countdown - Date.now();
 

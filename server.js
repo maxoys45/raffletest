@@ -1,8 +1,10 @@
+import dotenv from "dotenv";
 import WebSocket, { WebSocketServer } from "ws";
 import { v4 as uuidv4 } from "uuid";
 
 import { pickRandomWinner, winnerData, barColors } from "./helpers/raffle.js";
-import { RAFFLE_MAX_PLAYERS } from "./shared/config.js";
+
+dotenv.config();
 
 const wss = new WebSocketServer({ port: 8080 });
 
@@ -56,7 +58,7 @@ wss.on("connection", (ws) => {
       if (gameState.status === "OPEN") {
         gameState.pot.push(entry);
 
-        if (gameState.pot.length >= RAFFLE_MAX_PLAYERS) {
+        if (gameState.pot.length >= process.env.RAFFLE_MAX_PLAYERS) {
           advanceGame("COUNTDOWN");
         } else {
           broadcastGameState();
@@ -78,6 +80,8 @@ wss.on("connection", (ws) => {
 
 // Broadcast helper function
 const broadcastGameState = () => {
+  console.log(gameState);
+
   wss.clients.forEach((client) => {
     if (client.readyState === WebSocket.OPEN) {
       client.send(
@@ -110,31 +114,40 @@ const advanceGame = (nextStatus) => {
 
   switch (nextStatus) {
     case "COUNTDOWN":
-      durationMs = 5000;
+      durationMs = Number(process.env.RAFFLE_TIMINGS_COUNTDOWN);
       gameState.countdownEndsAt = Date.now() + durationMs;
 
       break;
 
     case "SPINNING":
-      durationMs = 3000;
+      durationMs = Number(process.env.RAFFLE_TIMINGS_SPIN_DURATION);
       gameState.winner = pickWinner(gameState.pot);
+      gameState.countdownEndsAt = null;
 
       break;
 
     case "SHOW_WINNER":
-      durationMs = 5000;
+      durationMs = Number(process.env.RAFFLE_TIMINGS_WINNER_SCREEN);
 
       break;
-      1;
 
     case "OPEN":
       durationMs = null;
 
       gameState.pot = [];
-      gameState.queued = gameState.queued;
       gameState.status = "OPEN";
-      gameState.countdownEndsAt = null;
       gameState.winner = null;
+
+      if (gameState.queued.length) {
+        gameState.pot = gameState.queued.splice(
+          0,
+          process.env.RAFFLE_MAX_PLAYERS
+        );
+      }
+
+      if (gameState.pot.length >= process.env.RAFFLE_MAX_PLAYERS) {
+        advanceGame("COUNTDOWN");
+      }
 
       break;
   }
@@ -157,7 +170,7 @@ const advanceGame = (nextStatus) => {
 const pickWinner = (entries) => {
   const winner = pickRandomWinner(entries);
 
-  return winnerData(winner, entries);
+  return winnerData(winner, entries, process.env.HOUSE_CUT);
 };
 
 // Handle new raffle entry
@@ -188,7 +201,7 @@ const pickWinner = (entries) => {
 // const shouldPickWinner = () => {
 //   if (
 //     !globals.pickingWinner &&
-//     globals.currentEntries?.length >= RAFFLE_MAX_PLAYERS
+//     globals.currentEntries?.length >= process.env.RAFFLE_MAX_PLAYERS
 //   ) {
 //     broadcast({ type: "POT_FULL" });
 
@@ -207,7 +220,7 @@ const pickWinner = (entries) => {
 //   if (globals.queuedEntries.length) {
 //     globals.currentEntries = globals.queuedEntries.splice(
 //       0,
-//       RAFFLE_MAX_PLAYERS
+//       process.env.RAFFLE_MAX_PLAYERS
 //     );
 //   }
 

@@ -1,7 +1,5 @@
 import crypto from "crypto";
 
-import { HOUSE_CUT } from "../shared/config.js";
-
 export const pickRandomWinner = (entries) => {
   const totalTickets = entries.reduce((acc, curr) => acc + curr.amount, 0);
 
@@ -22,7 +20,7 @@ export const pickRandomWinner = (entries) => {
 };
 
 // Get the data for the winning bet.
-export const winnerData = (winner, entries) => {
+export const winnerData = (winner, entries, HOUSE_CUT) => {
   const totalTickets = entries.reduce((acc, curr) => acc + curr.amount, 0);
 
   const winnerChance = winner.amount / totalTickets;
