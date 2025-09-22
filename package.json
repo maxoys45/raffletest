@@ -10,6 +10,7 @@
     "both": "concurrently \"yarn run start\" \"yarn run dev\""
   },
   "devDependencies": {
+    "better-sqlite3": "^12.3.0",
     "concurrently": "^9.2.1",
     "crypto": "^1.0.1",
     "dotenv": "^17.2.2",

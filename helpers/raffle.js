@@ -1,9 +1,7 @@
 import crypto from "crypto";
 
 export const pickRandomWinner = (entries) => {
-  const totalTickets = entries.reduce((acc, curr) => acc + curr.amount, 0);
-
-  const winningTicket = crypto.randomInt(totalTickets);
+  const winningTicket = crypto.randomInt(potTotal(entries));
 
   let cumulative = 0;
 
@@ -16,9 +14,14 @@ export const pickRandomWinner = (entries) => {
   }
 };
 
+// Get the total of a pot.
+export const potTotal = (entries) => {
+  return entries.reduce((acc, curr) => acc + curr.amount, 0);
+};
+
 // Get the data for the winning bet.
 export const winnerData = (winner, entries, HOUSE_CUT) => {
-  const totalTickets = entries.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalTickets = potTotal(entries);
 
   const winnerChance = winner.amount / totalTickets;
   let winnerValue = totalTickets * (1 - HOUSE_CUT);
@@ -32,9 +35,10 @@ export const winnerData = (winner, entries, HOUSE_CUT) => {
   return {
     id: winner.id,
     alias: winner.address,
-    color: winner.color,
+    amount: winner.amount,
+    value: Number(winnerValue),
     chance: winnerChance,
-    value: Number(winnerValue.toFixed(2)),
+    color: winner.color,
   };
 };
 

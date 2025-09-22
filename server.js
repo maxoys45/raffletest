@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 import WebSocket, { WebSocketServer } from "ws";
 import { v4 as uuidv4 } from "uuid";
 
+import { recordWin, getStats } from "./db/stats.js";
+
 import { pickRandomWinner, winnerData, barColors } from "./helpers/raffle.js";
 
 dotenv.config();
@@ -37,7 +39,10 @@ wss.on("connection", (ws) => {
   ws.send(
     JSON.stringify({
       type: "GAME_STATE",
-      state: gameState,
+      state: {
+        ...gameState,
+        stats: getStats(),
+      },
     })
   );
 
@@ -99,7 +104,10 @@ const broadcastGameState = () => {
       client.send(
         JSON.stringify({
           type: "GAME_STATE",
-          state: gameState,
+          state: {
+            ...gameState,
+            stats: getStats(),
+          },
         })
       );
     }
@@ -144,6 +152,8 @@ const advanceGame = (nextStatus) => {
     case "SPINNING":
       gameState.winner = pickWinner(gameState.pot);
       gameState.countdownEndsAt = null;
+
+      recordWin(gameState.winner, gameState.pot);
 
       globals.phaseTimer = setTimeout(
         () => advanceGame("SHOW_WINNER"),
@@ -197,71 +207,5 @@ const pickWinner = (entries) => {
 
   return winnerData(winner, entries, env.HOUSE_CUT);
 };
-
-// Handle new raffle entry
-// const handleNewEntry = (entry) => {
-//   let broadcastType;
-
-//   if (globals.pickingWinner) {
-//     globals.queuedEntries.push(entry);
-
-//     broadcastType = "QUEUED_ENTRY";
-//   } else {
-//     globals.currentEntries.push(entry);
-
-//     broadcastType = "ENTRY_ACCEPTED";
-//   }
-
-//   broadcast({
-//     type: broadcastType,
-//     id: entry.id,
-//     amount: entry.amount,
-//     address: entry.address,
-//     color: entry.color,
-//   });
-
-//   shouldPickWinner();
-// };
-
-// const shouldPickWinner = () => {
-//   if (
-//     !globals.pickingWinner &&
-//     globals.currentEntries?.length >= process.env.RAFFLE_MAX_PLAYERS
-//   ) {
-//     broadcast({ type: "POT_FULL" });
-
-//     globals.potFull = true;
-
-//     pickWinner();
-//   }
-// };
-
-// const resetPot = () => {
-//   globals.pickingWinner = false;
-//   globals.currentEntries = [];
-//   globals.availableColors = [...barColors];
-//   globals.potFull = false;
-
-//   if (globals.queuedEntries.length) {
-//     globals.currentEntries = globals.queuedEntries.splice(
-//       0,
-//       process.env.RAFFLE_MAX_PLAYERS
-//     );
-//   }
-
-//   console.log("queue", globals.queuedEntries);
-
-//   broadcast({
-//     type: "RAFFLE_ENTRIES",
-//     entries: globals.currentEntries,
-//   });
-
-//   broadcast({
-//     type: "QUEUED_ENTRIES",
-//     entries: globals.queuedEntries,
-//   });
-
-//   shouldPickWinner();
-// };
 
 console.log("WebSocket server running on ws://localhost:8080");

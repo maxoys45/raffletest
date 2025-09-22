@@ -1,7 +1,7 @@
 import type { EntriesType, WinnerType } from "../@types";
 
 // Convert decimal number to a percentage.
-export const toPercent = (decimal: number, decimals: number = 0) => {
+export const toPercent = (decimal: number, decimals: number = 2) => {
   return `${(decimal * 100).toFixed(decimals)}%`;
 };
 

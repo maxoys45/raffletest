@@ -6,11 +6,12 @@ import { Tooltip } from "react-tooltip";
 import Entry from "./components/Entry";
 import WinnerBar from "./components/WinnerBar";
 import WinnerCountdown from "./components/WinnerCountdown";
+import Stats from "./components/Stats";
 
 import { spinAnimation } from "./helpers";
 
 import type { FormEvent } from "react";
-import type { EntriesType, StatusType, WinnerType } from "./@types";
+import type { EntriesType, StatusType, WinnerType, StatsType } from "./@types";
 
 import "./App.css";
 
@@ -28,6 +29,7 @@ function App() {
   const [lastWinner, setLastWinner] = useState<WinnerType | null>(null);
   const [showWinner, setShowWinner] = useState<boolean>(false);
   const [countdown, setCountdown] = useState<number>(0);
+  const [stats, setStats] = useState<StatsType | null>(null);
 
   const [amount, setAmount] = useState<string>("");
   const [address, setAddress] = useState<string>("");
@@ -86,6 +88,11 @@ function App() {
 
         if (state.status === "SHOW_WINNER") {
           setLastWinner(state.winner);
+        }
+
+        // We don't want someone to see the updated stats while a pot is rolling.
+        if (state.status === "OPEN" || state.status === "SHOW_WINNER") {
+          setStats(state.stats);
         }
       }
     };
@@ -245,7 +252,7 @@ function App() {
         ))}
       </ul> */}
 
-      <div className="mt-10 grid grid-cols-2 gap-2">
+      <div className="mt-10 grid grid-cols-2 gap-2 rounded-2xl bg-black px-4 py-4">
         <div className="">
           <h2>Entries:</h2>
           <ul className="">
@@ -268,6 +275,8 @@ function App() {
           </ul>
         </div>
       </div>
+
+      {stats && <Stats stats={stats} />}
     </div>
   );
 }

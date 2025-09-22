@@ -33,14 +33,14 @@ const WinnerBar = ({
       <span>They won with a</span>
 
       <span className="flex items-center gap-2 rounded-md bg-gray-950 px-2 py-0.5">
-        {toPercent(lastWinner ? lastWinner.chance : 0, 2)}
+        {toPercent(lastWinner ? lastWinner.chance : 0)}
       </span>
 
       <span>chance. They won</span>
 
       {lastWinner && (
         <span className="flex items-center gap-2 rounded-md bg-gray-950 px-2 py-0.5">
-          {lastWinner.value}
+          {lastWinner.value.toFixed(2)}
         </span>
       )}
 
