@@ -15,17 +15,6 @@ export const getRandomArbitrary = (min: number, max: number): number => {
 
 // Colors used for the spinning bar.
 export const barColors = [
-  // "#FF0000",
-  // "#00FFFF",
-  // "#FF8000",
-  // "#0080FF",
-  // "#FFFF00",
-  // "#8000FF",
-  // "#80FF00",
-  // "#FF00FF",
-  // "#00FF80",
-  // "#FF0080",
-
   "#c2e2ef",
   "#6c2a38",
   "#f3c52a",
@@ -57,6 +46,7 @@ export const spinAnimation = (
     const entryWidth = (entry.amount / totalTickets) * totalWidth;
 
     if (entry.id === winner.id) {
+      console.log("winner found");
       winningEntryStart = cumulative;
       winningEntryEnd = cumulative + entryWidth;
 

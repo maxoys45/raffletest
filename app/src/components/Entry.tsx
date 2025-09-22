@@ -18,7 +18,7 @@ const Entry = ({
         transition={{ duration: spinning ? 0 : 0.5, ease: "easeInOut" }}
         style={{ backgroundColor: entry.color }}
         data-tooltip-id="entry-tooltip"
-        data-tooltip-content={entry.amount}
+        data-tooltip-content={`${entry.address && `${entry.address}: `}${entry.amount}`}
         data-tooltip-variant="light"
       ></motion.div>
     </>

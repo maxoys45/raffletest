@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import clsx from "clsx";
 import { motion, animate } from "motion/react";
 import { Tooltip } from "react-tooltip";
@@ -16,17 +16,18 @@ import "./App.css";
 
 function App() {
   const wsRef = useRef<WebSocket | null>(null);
-  const prevSpinning = useRef<boolean>(false);
+  const animatedEntriesRef = useRef<EntriesType>([]);
+  const hasAnimatedRef = useRef<boolean>(false);
   // const [users, setUsers] = useState([]);
   // const [username, setUsername] = useState("");
   const [entries, setEntries] = useState<EntriesType>([]);
   const [queuedEntries, setQueuedEntries] = useState<EntriesType>([]);
-  const [status, setStatus] = useState<StatusType>("");
+  const [status, setStatus] = useState<StatusType>("OPEN");
   const [spinning, setSpinning] = useState<boolean>(false);
   const [winner, setWinner] = useState<WinnerType | null>(null);
+  const [lastWinner, setLastWinner] = useState<WinnerType | null>(null);
   const [showWinner, setShowWinner] = useState<boolean>(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
-  const [animatedEntries, setAnimatedEntries] = useState<EntriesType>([]);
+  const [countdown, setCountdown] = useState<number>(0);
 
   const [amount, setAmount] = useState<string>("");
   const [address, setAddress] = useState<string>("");
@@ -61,13 +62,17 @@ function App() {
       if (data.type === "GAME_STATE") {
         const { state } = data;
 
-        console.table(state);
+        // console.table(state);
 
         setStatus(state.status);
 
         setEntries(state.pot);
 
         setQueuedEntries(state.queued);
+
+        if (state.status === "SPINNING" && state.winner) {
+          animatedEntriesRef.current = state.pot;
+        }
 
         setCountdown(state.countdownEndsAt);
 
@@ -78,67 +83,11 @@ function App() {
         setShowWinner(state.status === "SHOW_WINNER");
 
         setWinner(state.winner);
+
+        if (state.status === "SHOW_WINNER") {
+          setLastWinner(state.winner);
+        }
       }
-
-      // switch (data.type) {
-      //   case "RAFFLE_ENTRIES":
-      //     setEntries(data.entries);
-
-      //     break;
-
-      //   case "ENTRY_ACCEPTED":
-      //     console.log(`amount=${data.amount} address=${data.address}`);
-
-      //     setEntries((prev) => [
-      //       ...prev,
-      //       {
-      //         amount: data.amount,
-      //         address: data.address,
-      //         id: data.id,
-      //         color: data.color,
-      //       },
-      //     ]);
-
-      //     break;
-
-      //   case "QUEUED_ENTRIES":
-      //     setQueuedEntries(data.entries);
-
-      //     break;
-
-      //   case "QUEUED_ENTRY":
-      //     setQueuedEntries((prev) => [
-      //       ...prev,
-      //       {
-      //         amount: data.amount,
-      //         address: data.address,
-      //         id: data.id,
-      //         color: data.color,
-      //       },
-      //     ]);
-
-      //     break;
-
-      //   case "POT_FULL":
-      //     setCountdown(true);
-
-      //     break;
-
-      //   // case "PICKING_WINNER":
-      //   //   break;
-
-      //   case "WINNER_CHOSEN":
-      //     const { type, ...rest } = data;
-
-      //     console.log(data);
-
-      //     setWinner(rest);
-
-      //     break;
-
-      //   default:
-      //     console.log("Unknown data.type");
-      // }
     };
 
     socket.onclose = () => {
@@ -176,59 +125,51 @@ function App() {
   };
 
   // Setup the animated entries.
-  useEffect(() => {
-    if (spinning && winner && !prevSpinning.current) {
-      setAnimatedEntries(entries);
-    }
+  // useLayoutEffect(() => {
+  //   if (spinning && winner && !prevSpinningRef.current) {
+  //     animatedEntriesRef.current = entries;
+  //   }
 
-    prevSpinning.current = spinning;
-  }, [spinning, winner, entries]);
+  //   prevSpinningRef.current = spinning;
+  // }, [spinning, winner, entries]);
 
   // Spin animation
   useEffect(() => {
     if (!carouselRef.current || !containerRef.current) return;
 
-    switch (status) {
-      case "SPINNING":
-        if (!winner || !animatedEntries.length) return;
+    if (
+      spinning &&
+      winner &&
+      animatedEntriesRef.current.length &&
+      !hasAnimatedRef.current
+    ) {
+      hasAnimatedRef.current = true;
 
-        const targetX = spinAnimation(
-          containerRef.current,
-          animatedEntries,
-          winner,
-          numOfLoops
-        );
+      const targetX = spinAnimation(
+        containerRef.current,
+        animatedEntriesRef.current,
+        winner,
+        numOfLoops
+      );
 
-        animate(
-          carouselRef.current,
-          { x: [0, Math.round(targetX)] },
-          {
-            duration: import.meta.env.VITE_RAFFLE_TIMINGS_SPIN_DURATION / 1000,
-            ease: [0.5, 0, 0, 1],
-          }
-        );
+      animate(
+        carouselRef.current,
+        { x: [0, Math.round(targetX)] },
+        {
+          duration: import.meta.env.VITE_RAFFLE_TIMINGS_SPIN_DURATION / 1000,
+          ease: [0.5, 0, 0, 1],
+        }
+      );
+    } else if (!spinning) {
+      hasAnimatedRef.current = false;
 
-        break;
-
-      case "SHOW_WINNER":
-        // animate(
-        //   carouselRef.current,
-        //   { opacity: 0 },
-        //   { duration: 0.5, ease: "easeInOut" }
-        // );
-
-        break;
-
-      case "OPEN":
-        animate(carouselRef.current, { x: 0, opacity: 1 });
-
-        break;
+      animate(carouselRef.current, { x: 0 });
     }
-  }, [status, animatedEntries, winner]);
+  }, [status, winner]);
 
   const renderEntries = spinning
     ? Array(numOfLoops + 1)
-        .fill(animatedEntries)
+        .fill(animatedEntriesRef.current)
         .flat()
     : entries;
 
@@ -258,9 +199,9 @@ function App() {
         />
       </div>
 
-      <WinnerBar winner={winner} showWinner={showWinner} />
+      <WinnerBar lastWinner={lastWinner} showWinner={showWinner} />
 
-      {countdown && <WinnerCountdown countdown={countdown} />}
+      <WinnerCountdown countdown={countdown} />
 
       {/* <form onSubmit={checkingIn}>
         <input

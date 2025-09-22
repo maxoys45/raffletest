@@ -5,10 +5,10 @@ import { toPercent } from "../helpers";
 import type { WinnerType } from "../@types";
 
 const WinnerBar = ({
-  winner,
+  lastWinner,
   showWinner,
 }: {
-  winner: WinnerType | null;
+  lastWinner: WinnerType | null;
   showWinner: boolean;
 }) => {
   return (
@@ -24,25 +24,23 @@ const WinnerBar = ({
         <span
           className="block h-[14px] w-[14px] rounded-full"
           style={{
-            backgroundColor: winner ? winner.color : "#FFFFFF",
+            backgroundColor: lastWinner ? lastWinner.color : "#FFFFFF",
           }}
         ></span>
-        {winner ? winner.alias : ""}
+        {lastWinner ? lastWinner.alias : ""}
       </span>
 
       <span>They won with a</span>
 
-      {winner && (
-        <span className="flex items-center gap-2 rounded-md bg-gray-950 px-2 py-0.5">
-          {toPercent(winner.chance, 2)}
-        </span>
-      )}
+      <span className="flex items-center gap-2 rounded-md bg-gray-950 px-2 py-0.5">
+        {toPercent(lastWinner ? lastWinner.chance : 0, 2)}
+      </span>
 
       <span>chance. They won</span>
 
-      {winner && (
+      {lastWinner && (
         <span className="flex items-center gap-2 rounded-md bg-gray-950 px-2 py-0.5">
-          {winner.value}
+          {lastWinner.value}
         </span>
       )}
 

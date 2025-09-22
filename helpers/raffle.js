@@ -7,14 +7,11 @@ export const pickRandomWinner = (entries) => {
 
   let cumulative = 0;
 
-  for (const [index, entry] of entries.entries()) {
+  for (const entry of entries) {
     cumulative += entry.amount;
 
     if (winningTicket < cumulative) {
-      return {
-        index,
-        ...entry,
-      };
+      return entry;
     }
   }
 };
@@ -34,7 +31,6 @@ export const winnerData = (winner, entries, HOUSE_CUT) => {
 
   return {
     id: winner.id,
-    index: winner.index,
     alias: winner.address,
     color: winner.color,
     chance: winnerChance,
