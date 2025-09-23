@@ -4,7 +4,7 @@ import type { StatsType } from "../@types";
 
 const Stats = ({ stats }: { stats: StatsType }) => {
   return (
-    <div className="mt-4 overflow-hidden rounded-2xl bg-black">
+    <div className="mt-8 overflow-hidden rounded-2xl bg-black">
       <h2 className="bg-gray-600 pt-1 pb-2 text-2xl text-black">Stats</h2>
 
       <div className="grid grid-cols-3 px-4 py-4">
@@ -13,7 +13,7 @@ const Stats = ({ stats }: { stats: StatsType }) => {
             <h3 className="text-xl">Biggest win:</h3>
 
             <p className="text-sm text-amber-300">
-              {stats.biggestWin?.value} by {stats.biggestWin?.alias}
+              {stats.biggestWin?.value.toFixed(2)} by {stats.biggestWin?.alias}
             </p>
           </div>
         )}
@@ -29,14 +29,15 @@ const Stats = ({ stats }: { stats: StatsType }) => {
           </div>
         )}
 
-        {stats.mostWins && (
+        {stats.mostWins?.length && (
           <div>
             <h3 className="text-xl">Most wins:</h3>
 
-            <p className="text-sm text-amber-300">
-              {stats.mostWins?.alias} has {stats.mostWins?.winCount}{" "}
-              {stats.mostWins?.winCount !== 1 ? "wins" : "win"}.
-            </p>
+            {stats.mostWins.map((winner, index) => (
+              <p key={index} className="text-sm text-amber-300">
+                {index + 1}. {winner.alias} - {winner.winCount}
+              </p>
+            ))}
           </div>
         )}
       </div>

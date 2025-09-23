@@ -1,4 +1,4 @@
-import type { EntriesType, WinnerType } from "../@types";
+import type { EntryType, WinnerType } from "../@types";
 
 // Convert decimal number to a percentage.
 export const toPercent = (decimal: number, decimals: number = 2) => {
@@ -29,7 +29,7 @@ export const barColors = [
 
 export const spinAnimation = (
   containerEl: HTMLDivElement,
-  entries: EntriesType,
+  entries: EntryType[],
   winner: WinnerType,
   loops: number
 ) => {

@@ -5,8 +5,6 @@ export type EntryType = {
   color: string;
 };
 
-export type EntriesType = EntryType[];
-
 export type WinnerType = {
   id: string;
   alias: string;
@@ -23,11 +21,19 @@ type WinnerStats = Omit<WinnerType, "chance" | "color"> & {
   timestamp: number;
 };
 
+type TopWinner = {
+  alias: string;
+  winCount: number;
+};
+
 export type StatsType = {
   biggestWin: WinnerStats;
   lowestPctWin: WinnerStats & { chance: number };
-  mostWins: {
-    alias: string;
-    winCount: number;
-  };
+  mostWins: TopWinner[];
+};
+
+export type ChatMessageType = {
+  alias: string;
+  msg: string;
+  timestamp: number;
 };

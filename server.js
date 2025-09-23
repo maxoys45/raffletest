@@ -85,6 +85,8 @@ wss.on("connection", (ws) => {
 
         broadcastGameState();
       }
+    } else if (data.type === "NEW_CHAT_MESSAGE") {
+      broadcastChatMessage(data.alias, data.msg);
     } else {
       console.log("Unknown message type:", data.type);
     }
@@ -95,7 +97,7 @@ wss.on("connection", (ws) => {
   });
 });
 
-// Broadcast helper function
+// Broadcast game state.
 const broadcastGameState = () => {
   console.log(gameState);
 
@@ -108,6 +110,22 @@ const broadcastGameState = () => {
             ...gameState,
             stats: getStats(),
           },
+        })
+      );
+    }
+  });
+};
+
+// Broadcase a new chat message.
+const broadcastChatMessage = (alias, msg) => {
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(
+        JSON.stringify({
+          type: "CHAT_UPDATE",
+          alias,
+          msg,
+          timestamp: Date.now(),
         })
       );
     }

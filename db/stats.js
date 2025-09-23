@@ -46,7 +46,7 @@ export const getStats = () => {
     LIMIT 5
   `
     )
-    .get();
+    .all();
 
   console.log({ biggestWin, lowestPctWin, mostWins });
 
