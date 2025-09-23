@@ -16,8 +16,9 @@ const SplashScreen = () => {
   }, []);
 
   return (
+    // @TODO: Remove splash screen after animation.
     <motion.div
-      className="absolute inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#111]"
+      className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#111]"
       animate={{
         opacity: 0,
       }}
