@@ -12,7 +12,8 @@ const Entry = ({
   return (
     <>
       <motion.div
-        className="shrink-0 basis-0 border-1 border-t-0 border-b-0 border-black"
+        // className="shrink-0 basis-0 border-1 border-t-0 border-b-0 border-black"
+        className="shrink-0 basis-0"
         initial={spinning ? undefined : { flexGrow: 0 }}
         animate={{ flexGrow: entry.amount }}
         transition={{ duration: spinning ? 0 : 0.5, ease: "easeInOut" }}

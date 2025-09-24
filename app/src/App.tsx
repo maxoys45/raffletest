@@ -11,6 +11,8 @@ import EntryQueue from "./components/EntryQueue";
 import ChatBox from "./components/ChatBox";
 import SplashScreen from "./components/SplashScreen";
 
+import Logo from "./assets/ezkda.svg?react";
+
 import { spinAnimation } from "./helpers";
 
 import type { FormEvent } from "react";
@@ -210,15 +212,43 @@ function App() {
 
   return (
     <>
-      <div className="mx-auto max-w-[1280px] p-4 text-center">
-        <h1 className="mb-6 text-4xl font-bold">🎟️ EZ KDA</h1>
+      <div className="flex items-center pt-6">
+        <motion.div
+          className="h-[5px] grow bg-white"
+          initial={{ flexGrow: 0 }}
+          animate={{
+            flexGrow: 1,
+          }}
+          transition={{ duration: 1.2, ease: [0, 1, 0.5, 1] }}
+        ></motion.div>
 
+        <div className="bg-dark-grey px-2">
+          <Logo className="h-[40px]" />
+        </div>
+
+        <div className="h-[5px] grow bg-kda-green"></div>
+      </div>
+
+      <motion.div
+        className="mx-auto max-w-[1280px] p-4 text-center"
+        initial={{ opacity: 0 }}
+        animate={{
+          opacity: 1,
+        }}
+        transition={{
+          duration: 1,
+          delay: 0.8,
+        }}
+      >
         <div>
-          <div className="mx-auto mt-6 mb-4 max-w-[644px] overflow-hidden rounded-full border-2 border-black shadow-md">
-            <div ref={containerRef} className="bet-bar">
+          <div className="relative mx-auto mt-6 mb-4 max-w-[960px] rounded-full border-2 border-black shadow-md">
+            <div
+              ref={containerRef}
+              className="relative mx-[-1px] overflow-hidden rounded-full bg-dark-grey"
+            >
               <motion.div
                 ref={carouselRef}
-                className={clsx("flex h-[30px]", !spinning && "w-full")}
+                className={clsx("flex h-[40px]", !spinning && "w-full")}
                 style={spinning ? { width: `${(numOfLoops + 1) * 100}%` } : {}}
               >
                 {renderEntries.map((entry, index) => {
@@ -228,6 +258,12 @@ function App() {
                 })}
               </motion.div>
             </div>
+
+            {/* Bar overlay for inner shadow and gradient */}
+            <div className="pointer-events-none absolute inset-0 -mx-[1px] rounded-full bg-linear-to-t from-black/0 to-black/40 inset-shadow-bar"></div>
+
+            {/* Winner centre slot */}
+            <div className="winning-slot pointer-events-none absolute top-1/2 left-1/2 h-full w-3 -translate-1/2 border-4 border-t-0 border-b-0 border-black"></div>
           </div>
 
           <Tooltip
@@ -289,14 +325,14 @@ function App() {
         {stats && <Stats stats={stats} />}
 
         <EntryQueue entries={entries} queuedEntries={queuedEntries} />
-      </div>
+      </motion.div>
 
       <ChatBox
         chatMessages={chatMessages}
         sendSocketMessage={sendSocketMessage}
       />
 
-      <SplashScreen />
+      {/* <SplashScreen /> */}
     </>
   );
 }

@@ -2,6 +2,8 @@
 
 @theme {
   --color-kda-green: #4a9079;
+  --color-dark-grey: #1a1a1a;
+  --inset-shadow-bar: 0 4px 0 2px rgba(0, 0, 0, 0.25) inset;
 }
 
 @keyframes logo-spin {
@@ -20,12 +22,18 @@
 }
 
 @layer components {
-  .bet-bar {
-    @apply relative mx-[-1px] bg-black before:bottom-0 before:border-b-[8px] after:top-0 after:border-t-[8px];
-
+  .winning-slot {
     &::before,
     &::after {
-      @apply pointer-events-none absolute left-1/2 z-10 h-0 w-0 -translate-x-1/2 border-r-[6px] border-l-[6px] border-black border-r-transparent border-l-transparent content-[''];
+      @apply absolute left-1/2 z-10 h-0 w-0 -translate-x-1/2 border-r-[7px] border-l-[7px] border-black border-r-transparent border-l-transparent content-[''];
+    }
+
+    &::before {
+      @apply top-full border-t-[8px];
+    }
+
+    &::after {
+      @apply bottom-full border-b-[8px];
     }
   }
 
