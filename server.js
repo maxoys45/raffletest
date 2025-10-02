@@ -1,24 +1,18 @@
-import dotenv from "dotenv";
 import WebSocket, { WebSocketServer } from "ws";
-import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 
-import { recordWin, getStats } from "./db/stats.js";
+import { listenForTxs, pactEvents } from "./@kadena/incoming-tx.js";
+
+import { recordWin, getStats } from "./db/helpers.js";
 
 import { pickRandomWinner, winnerData, barColors } from "./helpers/raffle.js";
 
-dotenv.config();
+import { env } from "./config.js";
+
+// Chainweb event height/stream for listening to new txs.
+listenForTxs();
 
 const wss = new WebSocketServer({ port: 8080 });
-
-const env = {
-  MAX_PLAYERS: Number(process.env.RAFFLE_MAX_PLAYERS) || 10,
-  HOUSE_CUT: Number(process.env.HOUSE_CUT) || 0.05,
-  TIMINGS_COUNTDOWN: Number(process.env.RAFFLE_TIMINGS_COUNTDOWN) || 5000,
-  TIMINGS_SPIN_DURATION:
-    Number(process.env.RAFFLE_TIMINGS_SPIN_DURATION) || 3000,
-  TIMINGS_WINNER_SCREEN:
-    Number(process.env.RAFFLE_TIMINGS_WINNER_SCREEN) || 5000,
-};
 
 const globals = {
   availableColors: [...barColors],
@@ -32,6 +26,34 @@ const gameState = {
   countdownEndsAt: null,
   winner: null,
 };
+
+pactEvents.on("RAFFLE_ENTRY", (tx) => {
+  const { address, amount } = tx;
+
+  const entry = {
+    id: crypto.randomUUID(),
+    address,
+    amount,
+    tickets: amount * env.TICKET_SCALE,
+    color: null,
+  };
+
+  if (gameState.status === "OPEN") {
+    entry.color = assignColor();
+
+    gameState.pot.push(entry);
+
+    broadcastGameState();
+
+    if (gameState.pot.length >= env.MAX_PLAYERS) {
+      advanceGame("COUNTDOWN");
+    }
+  } else {
+    gameState.queued.push(entry);
+
+    broadcastGameState();
+  }
+});
 
 wss.on("connection", (ws) => {
   console.log("Client connected");
@@ -64,9 +86,10 @@ wss.on("connection", (ws) => {
       const { amount, address } = data;
 
       const entry = {
-        id: uuidv4(),
+        id: crypto.randomUUID(),
         address,
         amount,
+        tickets: amount * env.TICKET_SCALE,
         color: null,
       };
 

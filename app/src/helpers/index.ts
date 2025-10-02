@@ -64,3 +64,10 @@ export const spinAnimation = (
 
   return -(loopsOffset + winnindMid - totalWidth / 2);
 };
+
+// Shorten long strings (useful for KDA addresses which are long).
+export const truncateLongAdd = (str: string) => {
+  if (str.length <= 20) return str;
+
+  return `${str.slice(0, 20)}...`;
+};

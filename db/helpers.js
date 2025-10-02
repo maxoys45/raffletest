@@ -52,3 +52,25 @@ export const getStats = () => {
 
   return { biggestWin, lowestPctWin, mostWins };
 };
+
+// Save the last processed block height
+export const setLastProcessedBlock = (height) => {
+  db.prepare(
+    `
+    INSERT OR REPLACE INTO meta (key, value)
+    VALUES (?, ?)
+  `
+  ).run("lastProcessedBlock", Number(height));
+};
+
+// Retrieve the last processed block height
+export const getLastProcessedBlock = () => {
+  const row = db
+    .prepare(
+      `
+    SELECT value FROM meta WHERE key = ?
+  `
+    )
+    .get("lastProcessedBlock");
+  return row ? Number(row.value) : null;
+};

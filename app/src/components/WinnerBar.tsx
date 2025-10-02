@@ -1,6 +1,6 @@
 import clsx from "clsx";
 
-import { toPercent } from "../helpers";
+import { toPercent, truncateLongAdd } from "../helpers";
 
 import type { WinnerType } from "../@types";
 
@@ -27,7 +27,7 @@ const WinnerBar = ({
             backgroundColor: lastWinner ? lastWinner.color : "#FFFFFF",
           }}
         ></span>
-        {lastWinner ? lastWinner.alias : ""}
+        {lastWinner ? truncateLongAdd(lastWinner.alias) : ""}
       </span>
 
       <span>They won with a</span>

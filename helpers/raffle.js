@@ -1,12 +1,14 @@
 import crypto from "crypto";
 
 export const pickRandomWinner = (entries) => {
-  const winningTicket = crypto.randomInt(potTotal(entries));
+  const total = Math.round(potTotal(entries, "tickets"));
+
+  const winningTicket = crypto.randomInt(total);
 
   let cumulative = 0;
 
   for (const entry of entries) {
-    cumulative += entry.amount;
+    cumulative += Math.round(entry.tickets);
 
     if (winningTicket < cumulative) {
       return entry;
@@ -14,14 +16,18 @@ export const pickRandomWinner = (entries) => {
   }
 };
 
-// Get the total of a pot.
-export const potTotal = (entries) => {
-  return entries.reduce((acc, curr) => acc + curr.amount, 0);
+/**
+ * Get the total of a pot.
+ * @param {*} entries - all entries in the pot
+ * @param {*} valueToUse - whether to use "tickets" or "amount", tickets is multiplied/rounded to remove any decimals.
+ */
+export const potTotal = (entries, valueToUse) => {
+  return entries.reduce((acc, curr) => acc + curr[valueToUse], 0);
 };
 
 // Get the data for the winning bet.
 export const winnerData = (winner, entries, HOUSE_CUT) => {
-  const totalTickets = potTotal(entries);
+  const totalTickets = potTotal(entries, "amount");
 
   const winnerChance = winner.amount / totalTickets;
   let winnerValue = totalTickets * (1 - HOUSE_CUT);

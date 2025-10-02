@@ -1,4 +1,4 @@
-import { toPercent } from "../helpers";
+import { toPercent, truncateLongAdd } from "../helpers";
 
 import type { StatsType } from "../@types";
 
@@ -13,7 +13,8 @@ const Stats = ({ stats }: { stats: StatsType }) => {
             <h3 className="text-xl">Biggest win:</h3>
 
             <p className="text-sm text-amber-300">
-              {stats.biggestWin?.value.toFixed(2)} by {stats.biggestWin?.alias}
+              {stats.biggestWin?.value.toFixed(2)} by{" "}
+              {truncateLongAdd(stats.biggestWin?.alias)}
             </p>
           </div>
         )}
@@ -24,18 +25,18 @@ const Stats = ({ stats }: { stats: StatsType }) => {
 
             <p className="text-sm text-amber-300">
               {toPercent(stats.lowestPctWin.chance)} by{" "}
-              {stats.lowestPctWin?.alias}
+              {truncateLongAdd(stats.lowestPctWin?.alias)}
             </p>
           </div>
         )}
 
-        {stats.mostWins?.length && (
+        {stats.mostWins?.length > 0 && (
           <div>
             <h3 className="text-xl">Most wins:</h3>
 
             {stats.mostWins.map((winner, index) => (
               <p key={index} className="text-sm text-amber-300">
-                {index + 1}. {winner.alias} - {winner.winCount}
+                {index + 1}. {truncateLongAdd(winner.alias)} - {winner.winCount}
               </p>
             ))}
           </div>
